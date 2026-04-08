@@ -4,6 +4,8 @@ import {CartForm, Money, type OptimisticCart} from '@shopify/hydrogen';
 import {useEffect, useRef} from 'react';
 import {useFetcher} from 'react-router';
 
+const LOYALTY_DISCOUNT_CODE = 'SAVE10';
+
 type CartSummaryProps = {
   cart: OptimisticCart<CartApiQueryFragment | null>;
   layout: CartLayout;
@@ -92,7 +94,45 @@ function CartDiscounts({
           </button>
         </div>
       </UpdateDiscountForm>
+
+      <LoyaltyDiscountButton discountCodes={codes} />
     </div>
+  );
+}
+
+function LoyaltyDiscountButton({
+  discountCodes,
+}: {
+  discountCodes: string[];
+}) {
+  const loyaltyFetcher = useFetcher({key: 'loyalty-discount-toggle'});
+  
+  const isApplied = discountCodes.some(
+    (code) => code.toUpperCase() === LOYALTY_DISCOUNT_CODE,
+  );
+  const nextDiscountCodes = isApplied
+    ? discountCodes.filter((code) => code.toUpperCase() !== LOYALTY_DISCOUNT_CODE)
+    : [...discountCodes, LOYALTY_DISCOUNT_CODE];
+
+  return (
+    <CartForm
+      fetcherKey="loyalty-discount-toggle"
+      route="/cart"
+      action={CartForm.ACTIONS.DiscountCodesUpdate}
+      inputs={{
+        discountCodes: nextDiscountCodes,
+      }}
+    >
+      <div className="cart-loyalty-action">
+        <button
+          className="cart-action-button"
+          type="submit"
+          disabled={loyaltyFetcher.state !== 'idle'}
+        >
+          {isApplied ? 'Remove loyalty discount' : 'Apply loyalty discount'}
+        </button>
+      </div>
+    </CartForm>
   );
 }
 

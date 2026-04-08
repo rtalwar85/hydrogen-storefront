@@ -358,6 +358,41 @@ button.reset:hover:not(:has(> *)) {
   align-items: center;
   display: flex;
 }
+
+.cart-loyalty-action {
+  margin-top: 0.75rem;
+}
+
+.cart-action-button {
+  background: #201710;
+  border: 1px solid #201710;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.65rem 1rem;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.cart-action-button:hover:not(:disabled) {
+  background: #fff;
+  color: #201710;
+}
+
+.cart-action-button:disabled {
+  background: #d0c7bf;
+  border-color: #d0c7bf;
+  color: #fff;
+  cursor: not-allowed;
+}
 /*
 * --------------------------------------------------
 * components/Search
