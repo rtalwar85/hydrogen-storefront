@@ -24,19 +24,12 @@ export const meta: Route.MetaFunction = ({data}) => {
 };
 
 export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
   return {...deferredData, ...criticalData};
 }
 
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- */
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const {handle} = params;
   const {storefront} = context;
@@ -49,14 +42,12 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     storefront.query(PRODUCT_QUERY, {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
     }),
-    // Add other queries here, so that they are loaded in parallel
   ]);
 
   if (!product?.id) {
     throw new Response(null, {status: 404});
   }
 
-  // The API handle might be localized, so redirect to the localized handle
   redirectIfHandleIsLocalized(request, {handle, data: product});
 
   return {
@@ -64,61 +55,119 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   };
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
 function loadDeferredData({context, params}: Route.LoaderArgs) {
-  // Put any API calls that is not critical to be available on first page render
-  // For example: product reviews, product recommendations, social feeds.
-
   return {};
 }
 
 export default function Product() {
   const {product} = useLoaderData<typeof loader>();
 
-  // Optimistically selects a variant with given available variant information
   const selectedVariant = useOptimisticVariant(
     product.selectedOrFirstAvailableVariant,
     getAdjacentAndFirstAvailableVariants(product),
   );
 
-  // Sets the search param to the selected variant without navigation
-  // only when no search params are set in the url
   useSelectedOptionInUrlParam(selectedVariant.selectedOptions);
 
-  // Get the product options array
   const productOptions = getProductOptions({
     ...product,
     selectedOrFirstAvailableVariant: selectedVariant,
   });
 
-  const {title, descriptionHtml} = product;
+  const {title, descriptionHtml, vendor, handle} = product;
+  const imageGallery = product.images?.nodes ?? [];
+  const selectedColor = selectedVariant?.selectedOptions.find((option) =>
+    option.name.toLowerCase().includes('color'),
+  )?.value;
+  const selectedSize = selectedVariant?.selectedOptions.find((option) =>
+    option.name.toLowerCase().includes('size'),
+  )?.value;
 
   return (
-    <div className="product">
-      <ProductImage image={selectedVariant?.image} />
-      <div className="product-main">
-        <h1>{title}</h1>
-        <ProductPrice
-          price={selectedVariant?.price}
-          compareAtPrice={selectedVariant?.compareAtPrice}
-        />
-        <br />
-        <ProductForm
-          productOptions={productOptions}
-          selectedVariant={selectedVariant}
-        />
-        <br />
-        <br />
-        <p>
-          <strong>Description</strong>
-        </p>
-        <br />
-        <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-        <br />
+    <section className="product-page">
+      <div className="product">
+        <div className="product-media-column">
+          <div className="product-breadcrumbs" aria-label="Breadcrumb">
+            <span>Home</span>
+            <span>/</span>
+            <span>Shop</span>
+            <span>/</span>
+            <span>{vendor}</span>
+          </div>
+          <ProductImage
+            image={selectedVariant?.image}
+            images={imageGallery}
+            title={title}
+          />
+        </div>
+
+        <div className="product-main">
+          <div className="product-panel">
+            <p className="product-eyebrow">{vendor}</p>
+            <h1>{title}</h1>
+            <div className="product-price-block">
+              <ProductPrice
+                price={selectedVariant?.price}
+                compareAtPrice={selectedVariant?.compareAtPrice}
+              />
+              <p className="product-tax-note">
+                Shipping options are calculated at checkout.
+              </p>
+            </div>
+
+            <div className="product-highlights" aria-label="Product highlights">
+              <span>New season energy</span>
+              <span>Easy day-to-night styling</span>
+              <span>Fast add-to-bag experience</span>
+            </div>
+
+            {(selectedColor || selectedSize) && (
+              <div className="product-selected-summary">
+                {selectedColor ? <span>Colour: {selectedColor}</span> : null}
+                {selectedSize ? <span>Size: {selectedSize}</span> : null}
+              </div>
+            )}
+
+            <ProductForm
+              productOptions={productOptions}
+              selectedVariant={selectedVariant}
+            />
+
+            <div className="product-utility-row">
+              <span>SKU: {selectedVariant?.sku || handle}</span>
+              <span>
+                {selectedVariant?.availableForSale
+                  ? 'In stock'
+                  : 'Currently unavailable'}
+              </span>
+            </div>
+          </div>
+
+          <div className="product-details-stack">
+            <details className="product-detail" open>
+              <summary>Description</summary>
+              <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
+            </details>
+            <details className="product-detail">
+              <summary>Fit & styling</summary>
+              <div>
+                <p>
+                  Style this piece with statement accessories and denim, or
+                  keep it minimal for a cleaner everyday look.
+                </p>
+              </div>
+            </details>
+            <details className="product-detail">
+              <summary>Shipping & returns</summary>
+              <div>
+                <p>
+                  Shipping methods and delivery estimates appear at checkout
+                  before payment is completed.
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
       </div>
       <Analytics.ProductView
         data={{
@@ -135,7 +184,7 @@ export default function Product() {
           ],
         }}
       />
-    </div>
+    </section>
   );
 }
 
@@ -208,6 +257,15 @@ const PRODUCT_FRAGMENT = `#graphql
     }
     adjacentVariants (selectedOptions: $selectedOptions) {
       ...ProductVariant
+    }
+    images(first: 8) {
+      nodes {
+        id
+        url
+        altText
+        width
+        height
+      }
     }
     seo {
       description

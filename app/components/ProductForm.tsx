@@ -20,12 +20,20 @@ export function ProductForm({
   return (
     <div className="product-form">
       {productOptions.map((option) => {
-        // If there is only a single value in the option values, don't display the option
         if (option.optionValues.length === 1) return null;
+
+        const selectedValue = option.optionValues.find((value) => value.selected);
 
         return (
           <div className="product-options" key={option.name}>
-            <h5>{option.name}</h5>
+            <div className="product-options-header">
+              <h5>{option.name}</h5>
+              {selectedValue ? (
+                <span className="product-options-selected">
+                  {selectedValue.name}
+                </span>
+              ) : null}
+            </div>
             <div className="product-options-grid">
               {option.optionValues.map((value) => {
                 const {
@@ -40,10 +48,6 @@ export function ProductForm({
                 } = value;
 
                 if (isDifferentProduct) {
-                  // SEO
-                  // When the variant is a combined listing child product
-                  // that leads to a different url, we need to render it
-                  // as an anchor tag
                   return (
                     <Link
                       className="product-options-item"
@@ -54,50 +58,52 @@ export function ProductForm({
                       to={`/products/${handle}?${variantUriQuery}`}
                       style={{
                         border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
-                        opacity: available ? 1 : 0.3,
+                          ? '1px solid #201710'
+                          : '1px solid #dad0c7',
+                        opacity: available ? 1 : 0.35,
                       }}
                     >
-                      <ProductOptionSwatch swatch={swatch} name={name} />
+                      <ProductOptionSwatch
+                        swatch={swatch}
+                        name={name}
+                        optionName={option.name}
+                      />
                     </Link>
                   );
-                } else {
-                  // SEO
-                  // When the variant is an update to the search param,
-                  // render it as a button with javascript navigating to
-                  // the variant so that SEO bots do not index these as
-                  // duplicated links
-                  return (
-                    <button
-                      type="button"
-                      className={`product-options-item${
-                        exists && !selected ? ' link' : ''
-                      }`}
-                      key={option.name + name}
-                      style={{
-                        border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
-                        opacity: available ? 1 : 0.3,
-                      }}
-                      disabled={!exists}
-                      onClick={() => {
-                        if (!selected) {
-                          void navigate(`?${variantUriQuery}`, {
-                            replace: true,
-                            preventScrollReset: true,
-                          });
-                        }
-                      }}
-                    >
-                      <ProductOptionSwatch swatch={swatch} name={name} />
-                    </button>
-                  );
                 }
+
+                return (
+                  <button
+                    type="button"
+                    className={`product-options-item${
+                      exists && !selected ? ' link' : ''
+                    }`}
+                    key={option.name + name}
+                    style={{
+                      border: selected
+                        ? '1px solid #201710'
+                        : '1px solid #dad0c7',
+                      opacity: available ? 1 : 0.35,
+                    }}
+                    disabled={!exists}
+                    onClick={() => {
+                      if (!selected) {
+                        void navigate(`?${variantUriQuery}`, {
+                          replace: true,
+                          preventScrollReset: true,
+                        });
+                      }
+                    }}
+                  >
+                    <ProductOptionSwatch
+                      swatch={swatch}
+                      name={name}
+                      optionName={option.name}
+                    />
+                  </button>
+                );
               })}
             </div>
-            <br />
           </div>
         );
       })}
@@ -118,8 +124,11 @@ export function ProductForm({
             : []
         }
       >
-        {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
+        {selectedVariant?.availableForSale ? 'Add to bag' : 'Sold out'}
       </AddToCartButton>
+      <p className="product-form-note">
+        Secure checkout with live shipping rates shown before payment.
+      </p>
     </div>
   );
 }
@@ -127,24 +136,32 @@ export function ProductForm({
 function ProductOptionSwatch({
   swatch,
   name,
+  optionName,
 }: {
   swatch?: Maybe<ProductOptionValueSwatch> | undefined;
   name: string;
+  optionName: string;
 }) {
   const image = swatch?.image?.previewImage?.url;
   const color = swatch?.color;
+  const isColorOption = optionName.toLowerCase().includes('color');
 
-  if (!image && !color) return name;
+  if (!isColorOption || (!image && !color)) {
+    return <span className="product-option-label-text">{name}</span>;
+  }
 
   return (
-    <div
-      aria-label={name}
-      className="product-option-label-swatch"
-      style={{
-        backgroundColor: color || 'transparent',
-      }}
-    >
-      {!!image && <img src={image} alt={name} />}
-    </div>
+    <span className="product-option-swatch-wrap">
+      <span
+        aria-label={name}
+        className="product-option-label-swatch"
+        style={{
+          backgroundColor: color || 'transparent',
+        }}
+      >
+        {!!image && <img src={image} alt={name} />}
+      </span>
+      <span className="product-option-label-text">{name}</span>
+    </span>
   );
 }
