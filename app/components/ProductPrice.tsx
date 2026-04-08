@@ -9,6 +9,12 @@ export function ProductPrice({
   compareAtPrice?: MoneyV2 | null;
 }) {
   return (
+<>
+
+ <div className="product-price">
+       
+    
+
     <div className="product-price">
       {compareAtPrice ? (
         <div className="product-price-on-sale">
@@ -23,5 +29,11 @@ export function ProductPrice({
         <span>&nbsp;</span>
       )}
     </div>
+
+      Loyalty Points: You could earn {Math.round(parseFloat(price.amount))} . 
+      <a href="/account/login"> Login In</a> or <a href="/account/register"> Register</a>
+      </div>
+
+    </>
   );
 }
