@@ -30,7 +30,7 @@ export function ProductPrice({
       )}
     </div>
 
-      Loyalty Points: You could earn {Math.round(parseFloat(price.amount))} . 
+     <h3 className="text-emerald-600 font-semibold"> Loyalty Points: You could earn {Math.round(parseFloat(price.amount))} . </h3>
       <a href="/account/login"> Login In</a> or <a href="/account/register"> Register</a>
       </div>
 
